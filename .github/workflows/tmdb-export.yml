@@ -1,0 +1,33 @@
+name: Update TMDB ID Index
+
+on:
+  schedule:
+    # Ruleaza zilnic la 8:30 UTC (dupa ce TMDB publica exportul, ~8:00 UTC)
+    - cron: '30 8 * * *'
+  workflow_dispatch: {}  # permite rulare manuala din tab-ul Actions, pentru testare
+
+jobs:
+  update-index:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # necesar ca sa poata face commit inapoi in repo
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Ruleaza scriptul de procesare
+        run: node scripts/process-tmdb-export.js
+
+      - name: Commit si push daca s-a schimbat ceva
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/movies-index.json.gz data/tv-index.json.gz
+          git diff --staged --quiet || git commit -m "chore: update TMDB index $(date -u +%Y-%m-%d)"
+          git push
